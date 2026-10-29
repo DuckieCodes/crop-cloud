@@ -1,0 +1,24 @@
+{
+  "name": "crop-cloud",
+  "productName": "Crop Cloud",
+  "version": "0.2.0",
+  "description": "Crop Cloud desktop app: the hub, app downloads and updates.",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "start:downloads": "electron . --downloads",
+    "stage": "node scripts/stage.js",
+    "pack-apps": "node scripts/pack-apps.js",
+    "dist": "npm run stage && npm run pack-apps && electron-builder --win --config electron-builder.config.js --publish never"
+  },
+  "dependencies": {
+    "adm-zip": "0.6.1",
+    "electron-updater": "6.8.10"
+  },
+  "devDependencies": {
+    "electron": "44.7.0",
+    "electron-builder": "26.17.0"
+  },
+  "author": "Crop Cloud"
+}

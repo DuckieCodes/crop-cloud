@@ -1,0 +1,22 @@
+Photo Crop: Update 0.2.0
+- Make planned apps invisible by default.
+- Introducing it to windows. (all features)
+- using github make the update sync (both with the crop cloud and apps within.)
+- when downloading you have to login to an account with email abd password. (saves one time)
+- download apps (makes it so people only need the ones they want saving storage.)
+- Collaboration, you can invite friends to you projects, they can view and watch and leave comments on it.
+(Cannot touch project, you can do watch parties, leave comments on the timelines, leave comments on photocrop)
+- Right click in apps to bring up quick access to tools.
+
+CLoud Storage: Release
+- You can store you most frequent, songs, effects, etc on the Storage. ALl members will have a cap
+at 10gb this can be used in all apps that it can be used in.
+
+FrameCrop: Update 0.1.1
+- Allows u to right click the side of the audio/video and create a new one and change from sterio to mono and
+back.
+- can right click in the project to bring up more tools. (same for photocrop.)
+
+
+
+
