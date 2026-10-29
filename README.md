@@ -44,7 +44,7 @@ npm run start:downloads    # installs apps from the latest GitHub release instea
 
 ## Accounts, cloud storage and sharing
 
-Sign-in, the 10 GB cloud storage cap, bigger plans and shared projects run on Supabase. Setup steps are in [supabase/README.md](supabase/README.md). Until `js/config.js` points at a project, sign-in is off and everything else works.
+Sign-in, the 10 GB cloud storage cap, bigger plans and shared projects run on Supabase, self-hosted on the Pi at `https://cropcloud.willythepi.com` (server folder `~/crop-cloud-server`, which has its own `CROPCLOUD.md` for adding friends, resetting passwords and backups). Sign-ups are invite-only. The database is [supabase/schema.sql](supabase/schema.sql), and [supabase/README.md](supabase/README.md) covers setting it up from scratch. If `js/config.js` has no server in it, sign-in is off and everything else still works.
 
 ## FrameCrop (the video editor)
 

@@ -335,7 +335,7 @@ function openSignIn({ mode = 'signin', reason = '', onDone } = {}) {
   function body() {
     const intro = {
       signin: reason || `Sign in to your ${esc(BRAND.name)} account.`,
-      signup: reason || 'One account for every app, your cloud storage and sharing with friends.',
+      signup: reason || 'One account for every app, your cloud storage and sharing with friends. Use the email you were invited with.',
       verify: `We sent a code to <strong>${esc(email)}</strong>. Enter it to finish creating your account.`,
       forgot: 'Enter your email and we’ll send you a code to reset your password.',
       reset: `Enter the code we sent to <strong>${esc(email)}</strong> and your new password.`,
@@ -350,8 +350,9 @@ function openSignIn({ mode = 'signin', reason = '', onDone } = {}) {
     }[step];
     const submit = { signin: 'Sign in', signup: 'Create account', verify: 'Confirm', forgot: 'Send code', reset: 'Save password' }[step];
     const links = {
-      signin: `<button type="button" class="link" data-step="forgot">Forgot password?</button>
-        <span class="muted">New here? <button type="button" class="link" data-step="signup">Create an account</button></span>`,
+      signin: `${CONFIG.emailCodes ? '<button type="button" class="link" data-step="forgot">Forgot password?</button>' : ''}
+        <span class="muted">New here? <button type="button" class="link" data-step="signup">Create an account</button></span>
+        ${CONFIG.emailCodes ? '' : '<span class="muted auth-note">Forgot your password? Ask whoever runs your Crop Cloud server to reset it.</span>'}`,
       signup: `<span class="muted">Already have an account? <button type="button" class="link" data-step="signin">Sign in</button></span>`,
       verify: '<button type="button" class="link" data-step="signin">Back to sign in</button>',
       forgot: '<button type="button" class="link" data-step="signin">Back to sign in</button>',

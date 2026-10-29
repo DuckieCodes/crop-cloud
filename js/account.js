@@ -18,6 +18,9 @@ const Account = (() => {
     if (code === 'invalid_credentials' || /invalid login credentials/i.test(msg)) return 'That email and password don’t match an account.';
     if (code === 'email_not_confirmed' || /email not confirmed/i.test(msg)) return 'Confirm your email first. Check your inbox for the code.';
     if (code === 'user_already_exists' || /already registered/i.test(msg)) return 'There’s already an account with that email. Sign in instead.';
+    // The invite-only check in schema.sql reaches the app as a generic database error.
+    if (/database error saving new user|invite-only/i.test(msg)) return 'That email isn’t on the invite list. Ask whoever runs your Crop Cloud server to add it.';
+    if (code === 'signup_disabled' || /signups not allowed/i.test(msg)) return 'New accounts are turned off on this server.';
     if (code === 'weak_password' || /password should be/i.test(msg)) return 'Use a longer password: at least 8 characters.';
     if (code === 'otp_expired' || /token has expired|invalid.*otp|otp.*invalid/i.test(msg)) return 'That code is wrong or has expired. Request a new one.';
     if (code === 'over_email_send_rate_limit' || /rate limit/i.test(msg)) return 'Too many attempts. Wait a minute and try again.';

@@ -16,16 +16,32 @@ It creates:
 
 - `plans`: Free (10 GB) is on. Plus (100 GB) and Pro (1 TB) stay hidden until you give them a `price_cents` and set `active` to true.
 - `profiles`: display name and plan for each person. People can change their name but never their plan.
+- `allowed_signups`: the invite list. Only these emails can create an account.
 - `projects`, `project_members`, `project_invites`, `comments`: sharing. Invited friends can view, watch and comment, never edit.
 - Storage buckets `library` (your files for every app) and `projects` (shared project snapshots). Both count toward the plan's cap, and uploads are refused once you reach it.
 - Watch-party access rules for Realtime channels named `party:<project id>`.
 
-## 3. Turn on email sign-in with codes
+## 3. Sign-in settings
 
-The apps ask for a 6-digit code instead of sending people to a web page, so the emails need to contain the code.
+Email codes are off for now (`emailCodes: false` in `js/config.js`), so the server doesn't need to send email and new accounts work straight away.
 
-1. **Authentication › Sign In / Providers › Email**: keep it on and leave **Confirm email** on. Invites are matched by email, so this stops someone from claiming another person's invites.
-2. **Authentication › Email Templates**: in **Confirm signup** and **Reset password**, put `{{ .Token }}` in the message (for example "Your Crop Cloud code is {{ .Token }}"). You can remove the link.
+1. Turn off email confirmation. On supabase.com: **Authentication › Sign In / Providers › Email › Confirm email** off. Self-hosted: `ENABLE_EMAIL_AUTOCONFIRM=true` in the server's `.env`.
+2. Sign-ups are invite-only. Add your own email first, then each friend's, in **Table Editor › allowed_signups** or the SQL Editor:
+
+   ```sql
+   insert into public.allowed_signups (email) values ('you@example.com'), ('friend@example.com');
+   ```
+
+   Anyone else who tries to create an account is told they're not on the list.
+3. If someone forgets their password, set a new one for them in the SQL Editor and tell them what it is:
+
+   ```sql
+   update auth.users
+   set encrypted_password = extensions.crypt('their new password', extensions.gen_salt('bf'))
+   where email = 'friend@example.com';
+   ```
+
+To turn email codes on later: give the server a way to send email (SMTP), turn email confirmation back on, put `{{ .Token }}` in the **Confirm signup** and **Reset password** email templates, and set `emailCodes: true`.
 
 ## 4. Connect the apps
 

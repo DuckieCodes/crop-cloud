@@ -2,8 +2,6 @@
 -- Supabase dashboard › SQL Editor › New query: paste this file and press Run.
 -- It is safe to run again after changes; every statement replaces what it made before.
 
-create extension if not exists citext;
-
 -- Turns text into a uuid, or null when it isn't one (for storage paths and channel names).
 create or replace function public.try_uuid(value text) returns uuid
 language plpgsql immutable set search_path = '' as $$
@@ -69,6 +67,30 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created after insert on auth.users
   for each row execute function public.handle_new_user();
 
+-- Sign-ups are invite-only: only emails on this list can create an account.
+-- Add people in Table Editor › allowed_signups, or:
+--   insert into public.allowed_signups (email) values ('friend@example.com');
+create table if not exists public.allowed_signups (
+  email text primary key check (email = lower(email)),
+  note text not null default '',
+  added_at timestamptz not null default now()
+);
+alter table public.allowed_signups enable row level security;
+revoke all on public.allowed_signups from anon, authenticated;
+
+create or replace function public.check_signup_allowed() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  if not exists (select 1 from public.allowed_signups where email = lower(new.email)) then
+    raise exception 'Sign-ups are invite-only: % is not on the list.', new.email;
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists before_auth_user_created on auth.users;
+create trigger before_auth_user_created before insert on auth.users
+  for each row execute function public.check_signup_allowed();
+
 -- ============================================================
 -- Shared projects
 -- People you invite can watch, view and comment. Only the owner can change
@@ -97,7 +119,7 @@ create index if not exists project_members_user on public.project_members (user_
 -- Invites wait here until the friend signs in with that email and accepts.
 create table if not exists public.project_invites (
   project_id uuid not null references public.projects on delete cascade,
-  email citext not null,
+  email text not null check (email = lower(email)),
   invited_by uuid not null default auth.uid() references auth.users on delete cascade,
   created_at timestamptz not null default now(),
   primary key (project_id, email)
@@ -152,8 +174,10 @@ alter table public.projects enable row level security;
 revoke update on public.projects from anon, authenticated;
 grant update (name, snapshot_path, thumb_path, updated_at) on public.projects to authenticated;
 drop policy if exists "Owners and members see projects" on public.projects;
+-- owner_id is checked on the row itself because a new project isn't visible to
+-- can_view_project() yet while the insert hands the row back.
 create policy "Owners and members see projects" on public.projects for select to authenticated
-  using (public.can_view_project(id));
+  using (owner_id = auth.uid() or public.can_view_project(id));
 drop policy if exists "Create your own projects" on public.projects;
 create policy "Create your own projects" on public.projects for insert to authenticated
   with check (owner_id = auth.uid());
@@ -245,16 +269,16 @@ language sql stable security definer set search_path = '' as $$
   join public.projects p on p.id = i.project_id
   left join public.profiles pr on pr.id = i.invited_by
   join auth.users u on u.id = auth.uid()
-  where i.email = u.email::citext and u.email_confirmed_at is not null
+  where i.email = lower(u.email) and u.email_confirmed_at is not null
   order by i.created_at desc;
 $$;
 
 create or replace function public.respond_to_invite(pid uuid, accept boolean) returns void
 language plpgsql security definer set search_path = '' as $$
 declare
-  address citext;
+  address text;
 begin
-  select email::citext into address from auth.users where id = auth.uid() and email_confirmed_at is not null;
+  select lower(email) into address from auth.users where id = auth.uid() and email_confirmed_at is not null;
   if address is null or not exists (select 1 from public.project_invites where project_id = pid and email = address) then
     raise exception 'That invite isn''t there any more.';
   end if;
