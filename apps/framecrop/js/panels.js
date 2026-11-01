@@ -61,8 +61,11 @@ definePanel('project', 'Project', {
       const unused = Model.data.media.filter((m) => !Model.seq.clips.some((c) => c.mediaId === m.id));
       Menus.open([
         Cmd.item('import'),
+        Cmd.item('import-resolve'),
         Cmd.item('import-timeline'),
         Cmd.item('open-sample'),
+        { sep: true },
+        Cmd.item('ai-edit'),
         { sep: true },
         { label: 'New Item', submenu: () => [Cmd.item('new-text'), Cmd.item('new-matte'), Cmd.item('new-adjustment')] },
         { sep: true },
@@ -91,8 +94,10 @@ definePanel('project', 'Project', {
     this.el.querySelectorAll('[data-pp="list"],[data-pp="grid"]').forEach((b) => b.classList.toggle('on', b.dataset.pp === this.view));
     if (!Model.data.media.length) {
       this.body.innerHTML = `<div class="pp-empty">${icon('importIcon', 28)}<p>Import media to start</p><p class="muted">Drop video, audio or image files here, or press Ctrl+I.</p>
-        <button class="pbtn pbtn-sm" data-sample>Open sample video</button></div>`;
+        <button class="pbtn pbtn-sm" data-sample>Open sample video</button>
+        <button class="pbtn pbtn-sm" data-resolve>Moving from DaVinci Resolve?</button></div>`;
       this.body.querySelector('[data-sample]').addEventListener('click', () => Samples.load());
+      this.body.querySelector('[data-resolve]').addEventListener('click', () => resolveGuideDialog());
       return;
     }
     const kindIcon = { video: 'film', audio: 'music', image: 'photo' };
@@ -128,6 +133,8 @@ definePanel('project', 'Project', {
           { label: 'Open in Source Monitor', disabled: MediaRT.get(m.id)?.status !== 'ready', run: () => Source.open(m) },
           { label: 'Insert at Playhead', run: () => Edit.placeMedia(m, { insert: true }) },
           { label: 'Overwrite at Playhead', run: () => Edit.placeMedia(m) },
+          { sep: true },
+          Cmd.item('ai-edit'),
           { sep: true },
           { label: 'Rename…', run: () => this.rename(m) },
           { label: 'Relink Media…', run: () => this.relink(m) },

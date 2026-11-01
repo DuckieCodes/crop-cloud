@@ -770,6 +770,8 @@ const Timeline = {
     const h = this.hit(e);
     if (h.clip && !App.sel.has(h.clip.id)) Edit.select([h.clip.id]);
     const items = h.clip ? [
+      { label: 'AI Edit Selection…', shortcut: 'Ctrl+Alt+A', run: () => aiSetupDialog() },
+      { sep: true },
       { label: 'Cut', shortcut: 'Ctrl+X', run: () => Edit.copy(true) },
       { label: 'Copy', shortcut: 'Ctrl+C', run: () => Edit.copy() },
       { label: 'Paste Attributes…', shortcut: 'Ctrl+Alt+V', run: () => Edit.pasteAttributes() },

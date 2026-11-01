@@ -60,7 +60,8 @@ The layout follows Premiere Pro's Editing workspace, and the Color workspace fol
 - **Export** (`Ctrl+M`): MP4 with H.264, HEVC, VP9 or AV1 (whatever the browser can encode) plus AAC or Opus audio; presets for YouTube 1080p/4K, web 720p, vertical, draft. Export Frame (`Ctrl+Shift+E`) saves a PNG.
 - **Saving**: the project autosaves; media is kept on this computer so it reopens next time. Save/Open a `.fcrop` project file with `Ctrl+S` / `Ctrl+O`.
 - **Remove Silence** (Sequence menu, `Ctrl+Alt+R`, or the waveform button on the timeline): finds quiet stretches and ripple-deletes them on all unlocked tracks so picture stays in sync. Use **Higher / Lower** (or drag the yellow line on the loudness graph) to set the threshold, plus Minimum silence and Padding. The cuts show in red on the timeline before you commit, and one Ctrl+Z undoes it.
-- **Moving over from DaVinci Resolve** (File › Import Timeline, `Ctrl+Alt+I`, or just drop the file in): in Resolve use File › Export › Timeline and choose FCPXML, Final Cut Pro 7 XML, EDL or OpenTimelineIO (`.otio`). FrameCrop also reads these from Premiere and Final Cut. Point it at your media files or folder; anything not found comes in offline for relinking. Cuts, tracks, speed changes, titles and dissolves transfer; grades and effects don't (those formats don't carry them). Resolve's own `.drp` project files are a closed format and can't be read.
+- **Moving over from DaVinci Resolve** (File › Import Timeline, `Ctrl+Alt+I`, or just drop the file in): in Resolve use File › Export › Timeline and choose FCPXML, Final Cut Pro 7 XML, EDL or OpenTimelineIO (`.otio`). FrameCrop also reads these from Premiere and Final Cut. Point it at your media files or folder; anything not found comes in offline for relinking. Cuts, tracks, speed changes, titles and dissolves transfer; grades and effects don't (those formats don't carry them). File › Import from DaVinci Resolve… walks through it step by step. Resolve's own `.drp` project files keep the edit in a closed format; dropping one in shows the guide and lists the footage it uses so you can bring that in.
+- **AI Edit** (top bar, Sequence › AI Edit…, `Ctrl+Alt+A`, or right-click selected clips): pick clips and a song, choose a style or describe it, and Claude (Anthropic's AI) cuts a montage to the beat, with transitions, zooms, a color look and titles if you want them. FrameCrop first works out what Claude needs, since it can't watch video: frames from each clip, how much each second moves, how loud it is, and the song's beats, bars and drops. The edit appears as a preview: **Watch** it, see **Why?** for each cut, ask for a **Change…**, then **Accept** or **Decline** (which puts the timeline back exactly). It uses your own Anthropic API key (stored only on that computer); each try costs roughly $0.10–0.40 with Claude Opus 5.5, less with Sonnet or Haiku.
 - **Sample video**: File › Open Sample Video (or the button in an empty Project panel) loads `apps/framecrop/samples/sample-talk.mp4`, a 32-second clip with spoken lines and pauses of different lengths, made for trying Remove Silence. `apps/framecrop/samples/make_sample.py` rebuilds it.
 
 Limits compared with Premiere/Resolve: footage must be a format Chrome/Edge can play (MP4/MOV with H.264, HEVC on most Windows PCs, VP9, AV1, WebM; not ProRes or DNxHR). There are no proxies, multicam, nested sequences, Fusion-style compositing, motion tracking or parallel nodes yet. Very long audio is decoded into memory for waveforms and export.
@@ -127,6 +128,7 @@ apps/framecrop/
   index.html              editor shell
   css/framecrop.css       dark NLE theme
   vendor/mp4-muxer.js     MP4 muxer (MIT, see mp4-muxer.LICENSE)
+  vendor/anthropic.js     Anthropic SDK 0.135.0 bundled for the browser (MIT, see anthropic.LICENSE)
   js/model.js             project, tracks, clips, timecode, edit operations, undo
   js/media.js             import, stored originals, thumbnails, waveforms, element pools, titles
   js/effects.js           effects, transitions, looks, keyframed parameters, LUT parsing
@@ -138,7 +140,8 @@ apps/framecrop/
   js/color.js             color wheels, curves, nodes and windows, scopes
   js/export.js            WebCodecs export to MP4, audio mixdown, Export Frame
   js/silence.js           Remove Silence (detection, preview, ripple delete)
-  js/interchange.js       timeline import: FCPXML, FCP7 XML, EDL, OTIO
+  js/interchange.js       timeline import: FCPXML, FCP7 XML, EDL, OTIO; the DaVinci Resolve guide
+  js/autoedit.js          AI Edit: clip and music analysis, the Claude request, building and previewing the edit
   js/layout.js            workspaces and docking
   js/app.js               commands, menus, shortcuts, autosave, startup
   samples/                sample-talk.mp4 (+ .js copy for one-click loading), make_sample.py

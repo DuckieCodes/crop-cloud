@@ -98,7 +98,9 @@ const Media = {
     const added = [];
     // Timeline files (FCPXML, XML, EDL, OTIO) open the timeline import instead.
     for (const file of files.filter(isTimelineFile)) Interchange.openFile(file);
-    for (const file of files.filter((f) => !isTimelineFile(f))) {
+    // Resolve project files can't be read as an edit; show how to export the timeline instead.
+    for (const file of files.filter((f) => /\.drp$/i.test(f.name))) openResolveProject(file);
+    for (const file of files.filter((f) => !isTimelineFile(f) && !/\.drp$/i.test(f.name))) {
       const kind = mediaKind(file);
       if (!kind) { toast(`"${file.name}" isn't a video, audio or image file.`); continue; }
       const id = uid();

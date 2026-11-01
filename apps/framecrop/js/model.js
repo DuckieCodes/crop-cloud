@@ -355,6 +355,7 @@ const History = {
 
   // Run fn as one undoable step. Return false from fn to cancel it.
   step(name, fn) {
+    this.settlePreview();
     const before = this.snapshot();
     const result = fn();
     if (result === false) { this.restore(before); return false; }
@@ -367,6 +368,7 @@ const History = {
 
   // For edits made live (dragging a slider): call begin() first, then commit(name).
   begin() {
+    this.settlePreview();
     if (!this.pendingBefore) this.pendingBefore = this.snapshot();
   },
 
@@ -379,7 +381,13 @@ const History = {
     App.changed();
   },
 
+  // Editing on top of an AI edit preview keeps it (as its own undo step).
+  settlePreview() {
+    if (typeof AIPreview !== 'undefined' && AIPreview.live()) AIPreview.accept({ quiet: true });
+  },
+
   undo() {
+    if (typeof AIPreview !== 'undefined' && AIPreview.live()) { AIPreview.decline(); return; }
     const e = this.undoStack.pop();
     if (!e) return;
     this.restore(e.before);

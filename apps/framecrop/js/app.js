@@ -1,6 +1,6 @@
 // FrameCrop app controller: commands, menus, keyboard shortcuts, autosave and startup.
 
-const FRAMECROP_VERSION = '0.1.1';
+const FRAMECROP_VERSION = '0.2.0';
 const PROJECT_KEY = 'framecrop.project';
 const PREFS_KEY_FC = 'framecrop.prefs';
 
@@ -53,13 +53,14 @@ D_('open-project', 'Open Project…', 'Ctrl+O', () => App.openProjectDialog());
 D_('save-project', 'Save Project', 'Ctrl+S', () => App.saveProject());
 D_('import', 'Import…', 'Ctrl+I', () => App.importDialog());
 D_('import-timeline', 'Import Timeline (Resolve, Premiere, Final Cut)…', 'Ctrl+Alt+I', () => App.importTimelineDialog());
+D_('import-resolve', 'Import from DaVinci Resolve…', null, () => resolveGuideDialog());
 D_('export-media', 'Export Media…', 'Ctrl+M', () => exportDialog());
 D_('export-frame', 'Export Frame', 'Ctrl+Shift+E', () => exportFrame());
 D_('open-sample', 'Open Sample Video', null, () => Samples.load());
 D_('home', 'Back to Crop Cloud', null, () => { location.href = '../../index.html'; });
 
 // Edit
-D_('undo', () => (History.undoStack.length ? `Undo ${History.undoStack[History.undoStack.length - 1].name}` : 'Undo'), 'Ctrl+Z', () => History.undo(), { enabled: () => History.undoStack.length > 0 });
+D_('undo', () => (AIPreview.live() ? 'Undo AI Edit Preview' : History.undoStack.length ? `Undo ${History.undoStack[History.undoStack.length - 1].name}` : 'Undo'), 'Ctrl+Z', () => History.undo(), { enabled: () => History.undoStack.length > 0 || !!AIPreview.live() });
 D_('redo', () => (History.redoStack.length ? `Redo ${History.redoStack[History.redoStack.length - 1].name}` : 'Redo'), ['Ctrl+Shift+Z', 'Ctrl+Y'], () => History.redo(), { enabled: () => History.redoStack.length > 0 });
 D_('cut', 'Cut', 'Ctrl+X', () => Edit.copy(true), { enabled: hasSel });
 D_('copy', 'Copy', 'Ctrl+C', () => Edit.copy(), { enabled: hasSel });
@@ -98,6 +99,7 @@ D_('linked-selection', 'Linked Selection', null, () => App.toggle('linked'), { c
 D_('zoom-in', 'Zoom In', ['=', 'Shift+='], () => Timeline.zoomAt(Timeline.ppf * 1.5));
 D_('zoom-out', 'Zoom Out', '-', () => Timeline.zoomAt(Timeline.ppf / 1.5));
 D_('zoom-fit', 'Zoom to Sequence', '\\', () => Timeline.zoomToFit());
+D_('ai-edit', 'AI Edit…', 'Ctrl+Alt+A', () => aiSetupDialog());
 D_('remove-silence', 'Remove Silence…', 'Ctrl+Alt+R', () => removeSilenceDialog(), { enabled: () => Model.seq.clips.some((c) => c.kind === 'audio') });
 D_('add-video-track', 'Add Video Track', null, () => Edit.addTrack('video'));
 D_('add-audio-track', 'Add Audio Track', null, () => Edit.addTrack('audio'));
@@ -158,15 +160,15 @@ const ci = (id) => Cmd.item(id);
 const subm = (label, items) => ({ label, submenu: () => items().filter(Boolean) });
 
 const MENUS_FC = [
-  ['File', () => [ci('new-project'), ci('open-project'), ci('save-project'), SEP_, ci('import'), ci('import-timeline'), ci('open-sample'), SEP_, subm('Export', () => [ci('export-media'), ci('export-frame')]), SEP_, ci('home')]],
+  ['File', () => [ci('new-project'), ci('open-project'), ci('save-project'), SEP_, ci('import'), ci('import-resolve'), ci('import-timeline'), ci('open-sample'), SEP_, subm('Export', () => [ci('export-media'), ci('export-frame')]), SEP_, ci('home')]],
   ['Edit', () => [ci('undo'), ci('redo'), SEP_, ci('cut'), ci('copy'), ci('paste'), ci('paste-insert'), ci('paste-attributes'), SEP_, ci('clear'), ci('ripple-delete'), SEP_, ci('select-all'), ci('deselect'), SEP_, ci('shortcuts')]],
   ['Clip', () => [ci('speed'), ci('enable'), ci('link'), ci('scale-frame')]],
-  ['Sequence', () => [ci('seq-settings'), SEP_, ci('add-edit'), ci('add-edit-all'), ci('trim-prev'), ci('trim-next'), SEP_, ci('video-transition'), ci('audio-transition'), ci('both-transitions'), SEP_, ci('lift'), ci('extract'), ci('insert'), ci('overwrite'), SEP_, ci('remove-silence'), SEP_, ci('zoom-in'), ci('zoom-out'), ci('zoom-fit'), ci('snap'), ci('linked-selection'), SEP_, ci('add-video-track'), ci('add-audio-track')]],
+  ['Sequence', () => [ci('ai-edit'), SEP_, ci('seq-settings'), SEP_, ci('add-edit'), ci('add-edit-all'), ci('trim-prev'), ci('trim-next'), SEP_, ci('video-transition'), ci('audio-transition'), ci('both-transitions'), SEP_, ci('lift'), ci('extract'), ci('insert'), ci('overwrite'), SEP_, ci('remove-silence'), SEP_, ci('zoom-in'), ci('zoom-out'), ci('zoom-fit'), ci('snap'), ci('linked-selection'), SEP_, ci('add-video-track'), ci('add-audio-track')]],
   ['Markers', () => [ci('mark-in'), ci('mark-out'), ci('mark-clip'), SEP_, ci('go-in'), ci('go-out'), SEP_, ci('clear-in'), ci('clear-out'), ci('clear-inout'), SEP_, ci('add-marker'), ci('next-marker'), ci('prev-marker'), ci('clear-markers')]],
   ['Graphics', () => [ci('new-text'), ci('new-matte'), ci('new-adjustment')]],
   ['Color', () => [ci('add-serial-node'), ci('toggle-node'), ci('reset-node'), ci('reset-grade'), SEP_, ci('copy-grade'), ci('paste-grade'), ci('grade-all'), SEP_, ci('load-lut'), SEP_, { label: 'Open Color Workspace', run: () => Layout.setWorkspace('color') }]],
   ['Window', () => [...Object.keys(WORKSPACES).map((id) => ci(`ws-${id}`)), ci('reset-ws'), SEP_, ...['project', 'source', 'program', 'timeline', 'effectControls', 'effects', 'audioMixer', 'graphics', 'history', 'markers', 'colorWheels', 'curves', 'nodes', 'scopes'].map((id) => ({ label: Panels[id].title, checked: Layout.isVisible(id), run: () => App.showPanel(id) }))]],
-  ['Help', () => [ci('shortcuts'), { label: 'About FrameCrop…', run: () => aboutDialogFC() }]],
+  ['Help', () => [ci('shortcuts'), { label: 'How to Move a Project from DaVinci Resolve', run: () => resolveGuideDialog() }, { label: 'AI Edit: Claude Settings…', run: () => aiSetupDialog() }, SEP_, { label: 'About FrameCrop…', run: () => aboutDialogFC() }]],
 ];
 
 // The shared menu code (from PhotoCrop) calls Menubar.step for arrow keys.
@@ -392,7 +394,7 @@ const App = {
 
   importDialog() {
     const input = document.getElementById('file-input');
-    input.accept = 'video/*,audio/*,image/*,.mov,.mkv,.m4a,.flac,.fcpxml,.xml,.edl,.otio';
+    input.accept = 'video/*,audio/*,image/*,.mov,.mkv,.m4a,.flac,.fcpxml,.xml,.edl,.otio,.drp';
     input.multiple = true;
     input.onchange = () => {
       const files = [...input.files];
@@ -404,12 +406,13 @@ const App = {
 
   importTimelineDialog() {
     const input = document.getElementById('file-input');
-    input.accept = '.fcpxml,.xml,.edl,.otio';
+    input.accept = '.fcpxml,.xml,.edl,.otio,.drp';
     input.multiple = false;
     input.onchange = () => {
       const file = input.files[0];
       input.value = '';
-      if (file) Interchange.openFile(file);
+      if (file && /\.drp$/i.test(file.name)) openResolveProject(file);
+      else if (file) Interchange.openFile(file);
     };
     input.click();
   },
@@ -428,11 +431,13 @@ const App = {
       <span class="hdr-title" id="hdr-title"></span>
       <span class="hdr-busy" id="busy" hidden></span>
       <span class="tl-spacer"></span>
+      <button class="pbtn hdr-ai" data-hdr="ai" title="Let Claude cut a montage from your clips (Ctrl+Alt+A)">${icon('sparkles', 14)} AI Edit</button>
       <button class="pbtn pbtn-primary hdr-export" data-hdr="export">${icon('exportIcon', 14)} Export</button>`;
     hdr.querySelectorAll('[data-ws]').forEach((b) => b.addEventListener('click', () => Layout.setWorkspace(b.dataset.ws)));
     hdr.querySelectorAll('[data-hdr]').forEach((b) => b.addEventListener('click', () => {
       if (b.dataset.hdr === 'import') this.importDialog();
       if (b.dataset.hdr === 'export') exportDialog();
+      if (b.dataset.hdr === 'ai') aiSetupDialog();
     }));
     hdr.querySelectorAll('[data-ws]').forEach((b) => b.classList.toggle('on', b.dataset.ws === Layout.ws));
   },

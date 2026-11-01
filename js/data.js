@@ -1,7 +1,7 @@
 // Static content for the hub. Rename the suite or add apps here.
 const BRAND = {
   name: 'Crop Cloud',
-  version: '0.2.0',
+  version: '0.2.1',
 };
 
 // status: 'available' apps are built and ship in releases; 'planned' apps show on the roadmap.
@@ -27,10 +27,10 @@ const APPS = [
     description: 'Posters, flyers, magazines and multi-page documents.',
   },
   {
-    id: 'framecrop', code: 'Fc', name: 'FrameCrop', status: 'available', version: '0.1.1', entry: 'apps/framecrop/index.html',
+    id: 'framecrop', code: 'Fc', name: 'FrameCrop', status: 'available', version: '0.2.0', entry: 'apps/framecrop/index.html',
     colors: ['#7a3cff', '#c46bff'], categories: ['video'],
     tagline: 'Video editing and color grading',
-    description: 'Multi-track editing with node-based color, effects, titles, an audio mixer and MP4 export.',
+    description: 'Multi-track editing with node-based color, effects, titles, an audio mixer, MP4 export and AI Edit, which cuts montages to the beat with Claude.',
   },
   {
     id: 'motioncrop', code: 'Mc', name: 'MotionCrop', status: 'planned',
@@ -149,9 +149,36 @@ const TUTORIALS = [
   },
 ];
 
+TUTORIALS.push(
+  {
+    id: 'ai-edit', topic: 'FrameCrop', title: 'Let Claude cut your montage', minutes: 3, level: 'Beginner',
+    colors: ['#7a3cff', '#c46bff'], icon: 'sparkles',
+    steps: [
+      'Import your clips and a song into FrameCrop. To re-edit part of a timeline, select those clips first.',
+      'Click AI Edit in the top bar (or press Ctrl+Alt+A). The first time, paste your Anthropic API key from console.anthropic.com.',
+      'Tick the clips to use, pick the music, then choose a style (Hype, Cinematic…) or describe it in your own words.',
+      'Click Create Edit. FrameCrop looks at your clips, finds the beat, and Claude plans the cuts.',
+      'Press Watch in the AI preview bar. Click Why? to see the reason for each cut.',
+      'Not quite right? Click Change… and say what to change. Happy? Click Accept. Decline puts your timeline back exactly as it was.',
+    ],
+  },
+  {
+    id: 'from-resolve', topic: 'FrameCrop', title: 'Move a project from DaVinci Resolve', minutes: 3, level: 'Beginner',
+    colors: ['#ff8a1f', '#7a3cff'], icon: 'swap',
+    steps: [
+      'In Resolve, open your project and the timeline you want on the Edit page.',
+      'Choose File › Export › Timeline…',
+      'Under "Save as type" pick FCPXML 1.10 Files (*.fcpxml), or OpenTimelineIO (*.otio), and save.',
+      'In FrameCrop choose File › Import from DaVinci Resolve… › Choose File… and pick the exported file.',
+      'Point FrameCrop at your footage folder and click Import. Cuts, tracks, speed and titles come across; redo the grade on the Color page.',
+    ],
+  },
+);
+
 const SEED_NOTIFICATIONS = [
   { id: 'suite-0.2', icon: 'download', title: `${BRAND.name} 0.2.0`, body: 'A Windows app that updates itself, apps you download one by one, and one sign-in per computer.' },
   { id: 'welcome', icon: 'sparkles', title: `Welcome to ${BRAND.name}`, body: 'Your creative hub is set up. Start with a new file or drop in a photo.' },
+  { id: 'framecrop-0.2', icon: 'sparkles', title: 'FrameCrop 0.2.0: AI Edit', body: 'Pick your clips and a song, describe the style, and Claude cuts a montage to the beat. Watch it, then keep it or not.' },
   { id: 'framecrop-0.1', icon: 'play', title: 'FrameCrop 0.1.0 is ready', body: 'Edit video on a multi-track timeline, grade with color nodes and export MP4.' },
   { id: 'photocrop-0.2', icon: 'image', title: 'PhotoCrop 0.2.0 is ready', body: 'Layers, masks, selections, 20+ tools, adjustments and filters.' },
   { id: 'tip-search', icon: 'search', title: 'Tip: search everything', body: 'Press Ctrl+K to find apps, files and settings.' },

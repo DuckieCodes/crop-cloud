@@ -528,3 +528,101 @@ function timelineImportDialog(file, text, parsed) {
     },
   });
 }
+
+// ---------- Moving over from DaVinci Resolve ----------
+// Step-by-step help for exporting a Resolve timeline. When a .drp project file is
+// dropped in, it also lists the footage that project uses (when the file can be read).
+function resolveGuideDialog({ drp = null, media = [] } = {}) {
+  openDialog({
+    title: 'Import from DaVinci Resolve',
+    width: 660,
+    okLabel: 'Choose File…',
+    cancelLabel: 'Close',
+    body: `
+      <div class="rg">
+        ${drp ? `<div class="rg-drp"><b>"${esc(drp)}" is a DaVinci Resolve project file.</b> Resolve stores the edit inside it in its own format, which other apps can't read, so export the timeline from Resolve as shown below.
+          ${media.length ? `<div class="rg-found"><span>It uses <b>${media.length}</b> media file${media.length === 1 ? '' : 's'}. You can bring ${media.length === 1 ? 'it' : 'them'} in now:</span>
+            <button type="button" class="pbtn pbtn-sm" data-rg-media>Find them in a folder…</button></div>
+            <div class="rg-list">${media.slice(0, 40).map((p) => `<div>${esc(p.split(/[\\/]/).pop())}</div>`).join('')}${media.length > 40 ? `<div>…and ${media.length - 40} more</div>` : ''}</div>` : ''}
+        </div>` : '<p>Resolve keeps its projects in its own format, so you bring your edit across by exporting the timeline from Resolve. It takes about a minute.</p>'}
+        <ol class="rg-steps">
+          <li><div><b>In Resolve, open your project</b> and open the timeline you want on the <b>Edit</b> page.</div>
+            <div class="rg-shot"><span class="rg-pane">Media Pool</span><span class="rg-item">Master</span><span class="rg-item on">${icon('film', 11)} My Timeline</span></div></li>
+          <li><div>Go to <b>File › Export › Timeline…</b></div>
+            <div class="rg-shot rg-menus">
+              <span class="rg-menu"><span class="on">File</span><span>Edit</span><span>Trim</span><span>Timeline</span></span>
+              <span class="rg-drop"><span>New Project…</span><span>Import</span><span class="on">Export ›</span><span>Save Project</span></span>
+              <span class="rg-drop"><span>Project Archive…</span><span class="on">Timeline…</span><span>Render Cache</span></span>
+            </div></li>
+          <li><div>Under <b>Save as type</b> pick <b>FCPXML 1.10 Files (*.fcpxml)</b>, any FCPXML version works. <b>OpenTimelineIO (*.otio)</b> works too. Name it and click <b>Save</b>.</div>
+            <div class="rg-shot"><span class="rg-field">File name: <b>My Timeline</b></span><span class="rg-field on">Save as type: <b>FCPXML 1.10 Files (*.fcpxml)</b> ▾</span><span class="rg-btn">Save</span></div></li>
+          <li><div><b>Back here</b>, click <b>Choose File…</b> and pick the exported file (or drop it anywhere in FrameCrop). Point it at the folder with your footage and click <b>Import</b>.</div></li>
+        </ol>
+        <p class="pdialog-note"><b>Comes across:</b> cuts, tracks, clip speed, titles and dissolves. <b>Doesn't:</b> color grades, Fusion, effects and audio levels, because these formats don't carry them. Redo the grade on the Color page. Several timelines? Export each one.</p>
+      </div>`,
+    onMount(api) {
+      api.el.querySelector('[data-rg-media]')?.addEventListener('click', () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.multiple = true;
+        input.webkitdirectory = true;
+        input.onchange = async () => {
+          const wanted = new Set(media.map((p) => normName(p.split(/[\\/]/).pop())));
+          const files = [...input.files].filter((f) => wanted.has(normName(f.name)));
+          if (!files.length) { toast('None of the project\'s files are in that folder.'); return; }
+          const added = await Media.importFiles(files);
+          toast(`Imported ${added.length} of ${media.length} file${media.length === 1 ? '' : 's'}.`);
+        };
+        input.click();
+      });
+    },
+    onOk() { App.importTimelineDialog(); },
+  });
+}
+
+async function openResolveProject(file) {
+  let media = [];
+  try { media = await drpMediaPaths(file); } catch { /* not a project file we can open */ }
+  resolveGuideDialog({ drp: file.name, media });
+}
+
+// Text of the zip entries whose names pass filter (stored or deflated).
+async function zipTextEntries(file, filter) {
+  const buf = new Uint8Array(await file.arrayBuffer());
+  const dv = new DataView(buf.buffer);
+  let eocd = -1;
+  for (let i = buf.length - 22; i >= Math.max(0, buf.length - 65557); i--) {
+    if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+  }
+  if (eocd < 0) throw new Error('Not a zip file');
+  const count = dv.getUint16(eocd + 10, true);
+  let p = dv.getUint32(eocd + 16, true);
+  const out = [];
+  for (let k = 0; k < count && dv.getUint32(p, true) === 0x02014b50; k++) {
+    const method = dv.getUint16(p + 10, true), size = dv.getUint32(p + 20, true);
+    const nameLen = dv.getUint16(p + 28, true), extraLen = dv.getUint16(p + 30, true), commentLen = dv.getUint16(p + 32, true);
+    const local = dv.getUint32(p + 42, true);
+    const name = new TextDecoder().decode(buf.subarray(p + 46, p + 46 + nameLen));
+    p += 46 + nameLen + extraLen + commentLen;
+    if (!filter(name) || (method !== 0 && method !== 8)) continue;
+    const start = local + 30 + dv.getUint16(local + 26, true) + dv.getUint16(local + 28, true);
+    let bytes = buf.subarray(start, start + size);
+    if (method === 8) bytes = new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer());
+    out.push({ name, text: new TextDecoder().decode(bytes) });
+  }
+  return out;
+}
+
+const RESOLVE_MEDIA_PATH = /(?:[A-Za-z]:[\\/]|\/)[^<>"|\r\n\t]*?\.(?:mp4|mov|m4v|mxf|mkv|avi|webm|braw|r3d|wav|mp3|m4a|aac|aiff?|flac|png|jpe?g|tiff?|exr|dng)(?![\w])/gi;
+
+// Footage paths mentioned anywhere in a .drp's XML, one per file name.
+async function drpMediaPaths(file) {
+  const found = new Map();
+  for (const entry of await zipTextEntries(file, (n) => /\.xml$/i.test(n))) {
+    for (const [path] of entry.text.matchAll(RESOLVE_MEDIA_PATH)) {
+      const key = normName(path.split(/[\\/]/).pop());
+      if (!found.has(key)) found.set(key, path);
+    }
+  }
+  return [...found.values()];
+}

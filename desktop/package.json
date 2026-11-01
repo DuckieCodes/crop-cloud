@@ -1,7 +1,7 @@
 {
   "name": "crop-cloud",
   "productName": "Crop Cloud",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Crop Cloud desktop app: the hub, app downloads and updates.",
   "main": "main.js",
   "private": true,
